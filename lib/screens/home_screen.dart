@@ -3,6 +3,10 @@ import 'package:app_links/app_links.dart';
 import 'package:loggy/loggy.dart';
 import '../services/auth.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+String baseUrl = "http://10.0.2.2:8000";
 
 
 class HomeScreen extends StatefulWidget {
@@ -21,6 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final AppLinks _appLinks = AppLinks();
   String? tokenState;
   late TextEditingController codeInput;
+  bool registered = false;
+  bool registrationError = false;
+  
 
   void _handleDeepLink() async {
 
@@ -55,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleProcessChallengeCode(String challengeCode) async {
     logInfo("CHALLENGE CODE ${challengeCode}");
+    
 
     final keyPair = await AppAuth.generateKeyPair();
 
@@ -68,6 +76,35 @@ class _HomeScreenState extends State<HomeScreen> {
     logInfo("Public key : $publicKeyBase64");
     logInfo("Signature : $signatureBase64" );
     logInfo("Device name : $deviceName");
+
+    final url = Uri.parse('$baseUrl/auth/registerdevice'); 
+    final Map<String,dynamic> body = {
+        "challenge_code": challengeCode,
+        "public_key":publicKeyBase64,
+        "signature": signatureBase64,
+        "device_name": deviceName
+    };
+    http.post(url,headers: {
+      "Content-Type": "application/json"
+    },body: jsonEncode(body)).timeout(const Duration(seconds: 5)).then((res) {
+      logInfo("RESPONSE ${res.statusCode}");
+      if (res.statusCode == 201) {
+        setState( () => registered= true);
+      } else {
+        logError('Request failed with status: ${res.statusCode}');
+        setState(() => registrationError = true);
+      }
+      // if (res.statusCode == 200) {
+      //   final List<Map<String, dynamic>> data = List<Map<String, dynamic>>.from(jsonDecode(res.body));
+      //   logInfo('IDP DATA $data');
+      //   setState(() {
+      //     loading = false;
+      //     idpList = data;
+      //   });
+      // } else {
+      //   logError('Request failed with status: ${res.statusCode}');
+      // }
+    });
   }
 
   @override
@@ -89,7 +126,28 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: const Text("Pair Auth"),
         ),
-        body: Column(
+        body: registered
+          ? Center(
+            child: Column(
+              children: [
+                const Text(
+                  "You have successfully registered",
+                  style: TextStyle(
+                    fontSize: 20
+                  ),
+                ),
+                const Text(
+                  "Please press continue in the browser to sign in.",
+                  style: TextStyle(
+                    fontSize: 18
+                  ),
+                ),
+              ]
+            
+            ),
+          ) 
+        
+          : Column(
           children: [
             tokenState != null 
             ? Text(tokenState!) 
@@ -102,7 +160,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () => _handleProcessChallengeCode(codeInput.text), 
                   child: const Text("Send")
-                )
+                ),
+                registrationError
+                ? const Text("Registration Failed",
+                  style: TextStyle(
+                    color: Colors.red
+                  ),
+                ) : const SizedBox()
               ],
             )
           ],
