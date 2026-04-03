@@ -107,32 +107,41 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } else {
       //Do the sign in flow
+      try {
+        final signature = await AppAuth.signChallengeWithStoredKey(challengeCode);
+
+        final signatureBase64 = base64Encode(signature.bytes);
+        final deviceId = await AppAuth.getDeviceId();
+
+        final Map<String,dynamic> body = {
+            "challenge_code": challengeCode,
+            "device_id":deviceId,
+            "signature": signatureBase64,
+        };
+
+        logInfo("SIGN IN FLOW $body");
+
+        final url = Uri.parse('$baseUrl/auth/deviceauth'); 
+
+        http.post(url,headers: {
+          "Content-Type": "application/json"
+        },body: jsonEncode(body)).timeout(const Duration(seconds: 5)).then((res) async {
+          logInfo("RESPONSE ${res.statusCode}");
+          if (res.statusCode == 200) {
+            setState( () => deviceAuthenticated = true);
+          } else {
+            logError('Request failed with status: ${res.statusCode}');
+            setState(() => registrationError = true);
+          }
+        });
+      } catch(err) {
+        logError("Error signing in $err");
+        setState(() {
+          registrationError = true;
+        });
+      }
       
-      final signature = await AppAuth.signChallengeWithStoredKey(challengeCode);
-      final signatureBase64 = base64Encode(signature.bytes);
-      final deviceId = await AppAuth.getDeviceId();
 
-      final Map<String,dynamic> body = {
-          "challenge_code": challengeCode,
-          "device_id":deviceId,
-          "signature": signatureBase64,
-      };
-
-      logInfo("SIGN IN FLOW $body");
-
-      final url = Uri.parse('$baseUrl/auth/deviceauth'); 
-
-      http.post(url,headers: {
-        "Content-Type": "application/json"
-      },body: jsonEncode(body)).timeout(const Duration(seconds: 5)).then((res) async {
-        logInfo("RESPONSE ${res.statusCode}");
-        if (res.statusCode == 200) {
-          setState( () => deviceAuthenticated = true);
-        } else {
-          logError('Request failed with status: ${res.statusCode}');
-          setState(() => registrationError = true);
-        }
-      });
 
     }
 
