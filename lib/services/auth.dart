@@ -30,6 +30,26 @@ class AppAuth {
     return signature;
   }
 
+  //For singing with existing private key
+  static Future<KeyPair> loadPrivateKey() async {
+    final encoded = await storage.read(key: 'private_key');
+    if (encoded == null) {
+      throw Exception('No private key found');
+    }
+    final privateKeyBytes = base64Decode(encoded);
+
+    // Reconstruct key pair from private key seed
+    return algorithm.newKeyPairFromSeed(privateKeyBytes);
+  }
+  
+  static Future<Signature> signChallengeWithStoredKey(String challenge) async {
+    final keyPair = await loadPrivateKey();
+    final signature = await algorithm.sign(
+      utf8.encode(challenge), // convert string to bytes
+      keyPair: keyPair,
+    );
+    return signature;
+  }
 
   static String toBase64(List<int> bytes) {
     return base64Encode(bytes);
@@ -44,6 +64,21 @@ class AppAuth {
       key: 'private_key',
       value: base64Encode(privateKeyBytes),
     );
+  }
+
+  static Future<void> storeDeviceId(int deviceId) async {
+    await storage.write(
+      key: 'device_id',
+      value: deviceId.toString(),
+    );
+  }
+
+  static Future<int> getDeviceId() async {
+      String? deviceId = await storage.read(key: "device_id");
+      if(deviceId != null) {
+        return int.parse(deviceId); 
+      }
+      throw Exception("Unable to retrieve device ID");
   }
 
   static Future<String> getDeviceName() async {

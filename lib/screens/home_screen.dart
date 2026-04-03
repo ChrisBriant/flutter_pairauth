@@ -8,6 +8,7 @@ import 'dart:convert';
 
 String baseUrl = "http://10.0.2.2:8000";
 
+enum AuthType { registration, signin }
 
 class HomeScreen extends StatefulWidget {
   static const String routeName = '/homescreen';
@@ -26,7 +27,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String? tokenState;
   late TextEditingController codeInput;
   bool registered = false;
+  bool deviceAuthenticated = false;
   bool registrationError = false;
+  AuthType authType = AuthType.registration;
   
 
   void _handleDeepLink() async {
@@ -64,47 +67,75 @@ class _HomeScreenState extends State<HomeScreen> {
     logInfo("CHALLENGE CODE ${challengeCode}");
     
 
-    final keyPair = await AppAuth.generateKeyPair();
+    if(authType == AuthType.registration) {
+      //Do the registration flow
+      final keyPair = await AppAuth.generateKeyPair();
 
-    final publicKeyBytes = await AppAuth.getPublicKey(keyPair);
-    final signature = await AppAuth.signChallenge(keyPair, challengeCode);
+      //Store the private key
+      await AppAuth.storePrivateKey(keyPair);
 
-    final publicKeyBase64 = base64Encode(publicKeyBytes);
-    final signatureBase64 = base64Encode(signature.bytes);
-    final deviceName =  await AppAuth.getDeviceName();
+      final publicKeyBytes = await AppAuth.getPublicKey(keyPair);
+      final signature = await AppAuth.signChallenge(keyPair, challengeCode);
 
-    logInfo("Public key : $publicKeyBase64");
-    logInfo("Signature : $signatureBase64" );
-    logInfo("Device name : $deviceName");
+      final publicKeyBase64 = base64Encode(publicKeyBytes);
+      final signatureBase64 = base64Encode(signature.bytes);
+      final deviceName =  await AppAuth.getDeviceName();
 
-    final url = Uri.parse('$baseUrl/auth/registerdevice'); 
-    final Map<String,dynamic> body = {
-        "challenge_code": challengeCode,
-        "public_key":publicKeyBase64,
-        "signature": signatureBase64,
-        "device_name": deviceName
-    };
-    http.post(url,headers: {
-      "Content-Type": "application/json"
-    },body: jsonEncode(body)).timeout(const Duration(seconds: 5)).then((res) {
-      logInfo("RESPONSE ${res.statusCode}");
-      if (res.statusCode == 201) {
-        setState( () => registered= true);
-      } else {
-        logError('Request failed with status: ${res.statusCode}');
-        setState(() => registrationError = true);
-      }
-      // if (res.statusCode == 200) {
-      //   final List<Map<String, dynamic>> data = List<Map<String, dynamic>>.from(jsonDecode(res.body));
-      //   logInfo('IDP DATA $data');
-      //   setState(() {
-      //     loading = false;
-      //     idpList = data;
-      //   });
-      // } else {
-      //   logError('Request failed with status: ${res.statusCode}');
-      // }
-    });
+      logInfo("Public key : $publicKeyBase64");
+      logInfo("Signature : $signatureBase64" );
+      logInfo("Device name : $deviceName");
+
+      final url = Uri.parse('$baseUrl/auth/registerdevice'); 
+      final Map<String,dynamic> body = {
+          "challenge_code": challengeCode,
+          "public_key":publicKeyBase64,
+          "signature": signatureBase64,
+          "device_name": deviceName
+      };
+      http.post(url,headers: {
+        "Content-Type": "application/json"
+      },body: jsonEncode(body)).timeout(const Duration(seconds: 5)).then((res) async {
+        logInfo("RESPONSE ${res.statusCode}");
+        if (res.statusCode == 201) {
+          final int deviceId = jsonDecode(res.body);
+          await AppAuth.storeDeviceId(deviceId);
+          setState( () => registered= true);
+        } else {
+          logError('Request failed with status: ${res.statusCode}');
+          setState(() => registrationError = true);
+        }
+      });
+    } else {
+      //Do the sign in flow
+      
+      final signature = await AppAuth.signChallengeWithStoredKey(challengeCode);
+      final signatureBase64 = base64Encode(signature.bytes);
+      final deviceId = await AppAuth.getDeviceId();
+
+      final Map<String,dynamic> body = {
+          "challenge_code": challengeCode,
+          "device_id":deviceId,
+          "signature": signatureBase64,
+      };
+
+      logInfo("SIGN IN FLOW $body");
+
+      final url = Uri.parse('$baseUrl/auth/deviceauth'); 
+
+      http.post(url,headers: {
+        "Content-Type": "application/json"
+      },body: jsonEncode(body)).timeout(const Duration(seconds: 5)).then((res) async {
+        logInfo("RESPONSE ${res.statusCode}");
+        if (res.statusCode == 200) {
+          setState( () => deviceAuthenticated = true);
+        } else {
+          logError('Request failed with status: ${res.statusCode}');
+          setState(() => registrationError = true);
+        }
+      });
+
+    }
+
   }
 
   @override
@@ -126,8 +157,9 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: const Text("Pair Auth"),
         ),
-        body: registered
-          ? Center(
+        body: registered || deviceAuthenticated
+          ? registered
+            ? Center(
             child: Column(
               children: [
                 const Text(
@@ -142,10 +174,42 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontSize: 18
                   ),
                 ),
+                ElevatedButton(
+                  onPressed: () => setState(() {
+                    registered = false;
+                  }), 
+                  child: const Text("DONE")
+                ),
               ]
             
             ),
           ) 
+          : Center(
+            child: Column(
+              children: [
+                const Text(
+                  "Device has successfully been verified.",
+                  style: TextStyle(
+                    fontSize: 20
+                  ),
+                ),
+                const Text(
+                  "Please press continue in the browser.",
+                  style: TextStyle(
+                    fontSize: 18
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => setState(() {
+                    deviceAuthenticated = false;
+                  }), 
+                  child: const Text("DONE")
+                ),
+              ]
+            
+            ),
+          ) 
+
         
           : Column(
           children: [
@@ -157,12 +221,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   controller: codeInput,
                 ),
+                RadioGroup(
+                  onChanged: (AuthType? val) => {
+                    setState(() {
+                      authType = val!;
+                    })
+                  },
+                  groupValue: authType,
+                  child: Column(
+                    children: [
+                      RadioListTile<AuthType>(
+                        title: Text("Register"),
+                        value: AuthType.registration,
+                      ),
+                      RadioListTile<AuthType>(
+                        title: Text("Sign In"),
+                        value: AuthType.signin,
+                      ),
+                    ],
+                  ),
+                ),
                 ElevatedButton(
                   onPressed: () => _handleProcessChallengeCode(codeInput.text), 
                   child: const Text("Send")
                 ),
                 registrationError
-                ? const Text("Registration Failed",
+                ? const Text("Unable to authenticate the device. Please try again from the app",
                   style: TextStyle(
                     color: Colors.red
                   ),
