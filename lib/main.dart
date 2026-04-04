@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:pairauth/screens/home_screen.dart';
 import 'package:loggy/loggy.dart';
+import './services/http_overrides.dart';
 
 void main() {
   Loggy.initLoggy();
+  HttpOverrides.global = MyHttpOverrides();
   runApp(const PairAuth());
 }
 

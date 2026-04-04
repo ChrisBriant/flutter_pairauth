@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-String baseUrl = "http://10.0.2.2:8000";
+String baseUrl = "https://192.168.1.145:8000";
 
 enum AuthType { registration, signin }
 
@@ -51,15 +51,22 @@ class _HomeScreenState extends State<HomeScreen> {
     logInfo("Deep link received: $uri");
 
     String? token = uri.queryParameters['token'];
+    String? type = uri.queryParameters['type'];
 
-    if (token != null) {
+    if (token != null && type != null) {
       logInfo("Pair token: $token");
+      logInfo("Flow type: $type");
       setState(() {
-        tokenState = token;
+        if(type == "register") {
+          authType = AuthType.registration; 
+        } else if(type == "signin") {
+          authType = AuthType.signin;
+        } else {
+          registrationError = true;
+        }
       });
-
-
-      // Send to backend to approve login
+      //Process the challenge code
+      _handleProcessChallengeCode(token);
     }
   }
 
@@ -68,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
 
     if(authType == AuthType.registration) {
+      logInfo("Running registration flow");
       //Do the registration flow
       final keyPair = await AppAuth.generateKeyPair();
 
@@ -92,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
           "signature": signatureBase64,
           "device_name": deviceName
       };
+      logInfo("The URL is $url");
       http.post(url,headers: {
         "Content-Type": "application/json"
       },body: jsonEncode(body)).timeout(const Duration(seconds: 5)).then((res) async {
@@ -104,9 +113,13 @@ class _HomeScreenState extends State<HomeScreen> {
           logError('Request failed with status: ${res.statusCode}');
           setState(() => registrationError = true);
         }
+      }).catchError((err) {
+        logError("Timeout error $err");
+        setState(() => registrationError = true);
       });
     } else {
       //Do the sign in flow
+      logInfo("Running signin flow");
       try {
         final signature = await AppAuth.signChallengeWithStoredKey(challengeCode);
 
