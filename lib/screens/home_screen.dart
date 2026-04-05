@@ -52,6 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     String? token = uri.queryParameters['token'];
     String? type = uri.queryParameters['type'];
+    logInfo("Pair token: $token");
+    logInfo("Flow type: $type");
 
     if (token != null && type != null) {
       logInfo("Pair token: $token");
@@ -179,103 +181,122 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: const Text("Pair Auth"),
         ),
-        body: registered || deviceAuthenticated
-          ? registered
-            ? Center(
-            child: Column(
-              children: [
-                const Text(
-                  "You have successfully registered",
-                  style: TextStyle(
-                    fontSize: 20
-                  ),
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              Image.asset(
+                'assets/logo.png',
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height * .3,
+              ),
+              Container(
+                margin: EdgeInsets.all(20),
+                child: registered || deviceAuthenticated
+                  ? registered
+                    ? Center(
+                    child: Column(
+                      children: [
+                        const Text(
+                          "You have successfully registered",
+                          style: TextStyle(
+                            fontSize: 20
+                          ),
+                        ),
+                        const Text(
+                          "Please press continue in the browser to sign in.",
+                          style: TextStyle(
+                            fontSize: 18
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => setState(() {
+                            registered = false;
+                          }), 
+                          child: const Text("DONE")
+                        ),
+                      ]
+                    
+                    ),
+                  ) 
+                  : Center(
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Device has successfully been verified.",
+                          style: TextStyle(
+                            fontSize: 20
+                          ),
+                        ),
+                        const Text(
+                          "Please press continue in the browser.",
+                          style: TextStyle(
+                            fontSize: 18
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => setState(() {
+                            deviceAuthenticated = false;
+                          }), 
+                          child: const Text("DONE")
+                        ),
+                      ]
+                    
+                    ),
+                  ) 
+                
+                
+                  : Column(
+                  children: [
+                    tokenState != null 
+                    ? Text(tokenState!) 
+                    : Column(
+                      children: [
+                        const Text(
+                          "Enter Code Manually", 
+                          style: TextStyle(
+                            fontSize: 20
+                          ),
+                        ),
+                        TextField(
+                          controller: codeInput,
+                        ),
+                        RadioGroup(
+                          onChanged: (AuthType? val) => {
+                            setState(() {
+                              authType = val!;
+                            })
+                          },
+                          groupValue: authType,
+                          child: Column(
+                            children: [
+                              RadioListTile<AuthType>(
+                                title: Text("Register"),
+                                value: AuthType.registration,
+                              ),
+                              RadioListTile<AuthType>(
+                                title: Text("Sign In"),
+                                value: AuthType.signin,
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => _handleProcessChallengeCode(codeInput.text), 
+                          child: const Text("Send")
+                        ),
+                        registrationError
+                        ? const Text("Unable to authenticate the device. Please try again from the app",
+                          style: TextStyle(
+                            color: Colors.red
+                          ),
+                        ) : const SizedBox()
+                      ],
+                    )
+                  ],
                 ),
-                const Text(
-                  "Please press continue in the browser to sign in.",
-                  style: TextStyle(
-                    fontSize: 18
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => setState(() {
-                    registered = false;
-                  }), 
-                  child: const Text("DONE")
-                ),
-              ]
-            
-            ),
-          ) 
-          : Center(
-            child: Column(
-              children: [
-                const Text(
-                  "Device has successfully been verified.",
-                  style: TextStyle(
-                    fontSize: 20
-                  ),
-                ),
-                const Text(
-                  "Please press continue in the browser.",
-                  style: TextStyle(
-                    fontSize: 18
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => setState(() {
-                    deviceAuthenticated = false;
-                  }), 
-                  child: const Text("DONE")
-                ),
-              ]
-            
-            ),
-          ) 
-
-        
-          : Column(
-          children: [
-            tokenState != null 
-            ? Text(tokenState!) 
-            : Column(
-              children: [
-                const Text("Enter Code Manually:"),
-                TextField(
-                  controller: codeInput,
-                ),
-                RadioGroup(
-                  onChanged: (AuthType? val) => {
-                    setState(() {
-                      authType = val!;
-                    })
-                  },
-                  groupValue: authType,
-                  child: Column(
-                    children: [
-                      RadioListTile<AuthType>(
-                        title: Text("Register"),
-                        value: AuthType.registration,
-                      ),
-                      RadioListTile<AuthType>(
-                        title: Text("Sign In"),
-                        value: AuthType.signin,
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => _handleProcessChallengeCode(codeInput.text), 
-                  child: const Text("Send")
-                ),
-                registrationError
-                ? const Text("Unable to authenticate the device. Please try again from the app",
-                  style: TextStyle(
-                    color: Colors.red
-                  ),
-                ) : const SizedBox()
-              ],
-            )
-          ],
+              ),
+            ],
+          ),
         ),
       );
   }
