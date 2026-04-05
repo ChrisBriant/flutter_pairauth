@@ -179,11 +179,75 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text("Pair Auth"),
+          title: const Text("Pair Auth - Authenticator"),
+          actions: [
+            IconButton(
+              onPressed: () => {
+                showDialog(
+                  context: context, 
+                  builder: (context) => AlertDialog(
+                    title: const Text("Info"),
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          "This is a demo authenticator application used to demonstrate device verification.",
+                          style: TextStyle(fontSize: 15),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Purpose",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const Text(
+                          "It serves as a secure authentication method for both account registration and sign-in processes.",
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "How to verify:",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text("1. Scan the QR code shown on the web app after signing in or registering."),
+                        const Text("2. Or, enter the code manually using the 'Enter Code Manually' field."),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Demo Environment",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const Text(
+                          "You can access the demo front-end application at:",
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          "pairauth.chrisbriant.uk",
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ],
+                    ),
+                    actionsAlignment: MainAxisAlignment.center,
+                    actions: [
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(), 
+                        child: const Text("Ok")
+                      )
+                    ],
+                  )
+                )
+              }, 
+              icon: Icon(Icons.info)
+            )
+          ],
         ),
         body: SingleChildScrollView(
           child: Column(
             children: [
+              SizedBox(height: 20,),
               Image.asset(
                 'assets/logo.png',
                 width: MediaQuery.of(context).size.width,
@@ -243,51 +307,99 @@ class _HomeScreenState extends State<HomeScreen> {
                     
                     ),
                   ) 
-                
-                
                   : Column(
                   children: [
                     tokenState != null 
                     ? Text(tokenState!) 
                     : Column(
                       children: [
-                        const Text(
-                          "Enter Code Manually", 
-                          style: TextStyle(
-                            fontSize: 20
+                        Container(
+                          padding: EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                                  color: const Color.fromARGB(255, 115, 160, 43),
+                                  width: 6.0,
+                            ),
+                            borderRadius: BorderRadius.circular(10)
+                          ),
+                          child: Container(
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 115, 160, 43),
+                              borderRadius: BorderRadius.circular(10)
+                              
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  "Enter Code Manually", 
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.white
+                                  ),
+                                ),
+                                TextField(
+                                  controller: codeInput,
+                                  style: TextStyle(
+                                    color: Colors.white
+                                  ),
+                                  decoration: InputDecoration(
+                                    enabledBorder: const UnderlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.white, 
+                                        width: 3.0, // Makes the line thicker
+                                      ),
+                                    ),
+                                    focusedBorder: const UnderlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.white, 
+                                        width: 3.0, // Makes the line thicker
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                RadioGroup(
+                                  onChanged: (AuthType? val) => {
+                                    setState(() {
+                                      authType = val!;
+                                    })
+                                  },
+                                  groupValue: authType,
+                                  child: Column(
+                                    children: [
+                                      RadioListTile<AuthType>(
+                                        fillColor: WidgetStateProperty.all(Colors.white),
+                                        title: Text("Register", style: TextStyle(color: Colors.white),),
+                                        value: AuthType.registration,
+                                      ),
+                                      RadioListTile<AuthType>(
+                                        fillColor: WidgetStateProperty.all(Colors.white),
+                                        title: Text("Sign In", style: TextStyle(color: Colors.white),),
+                                        value: AuthType.signin,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => _handleProcessChallengeCode(codeInput.text), 
+                                  child: const Text("Send")
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        TextField(
-                          controller: codeInput,
-                        ),
-                        RadioGroup(
-                          onChanged: (AuthType? val) => {
-                            setState(() {
-                              authType = val!;
-                            })
-                          },
-                          groupValue: authType,
-                          child: Column(
-                            children: [
-                              RadioListTile<AuthType>(
-                                title: Text("Register"),
-                                value: AuthType.registration,
-                              ),
-                              RadioListTile<AuthType>(
-                                title: Text("Sign In"),
-                                value: AuthType.signin,
-                              ),
-                            ],
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => _handleProcessChallengeCode(codeInput.text), 
-                          child: const Text("Send")
-                        ),
+
                         registrationError
-                        ? const Text("Unable to authenticate the device. Please try again from the app",
-                          style: TextStyle(
-                            color: Colors.red
+                        ? Container(
+                          margin: EdgeInsets.symmetric(vertical: 10),
+                          padding: EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100
+                          ),
+                          child: const Text("Unable to authenticate the device. Please try again from the app.",
+                            style: TextStyle(
+                              color: Colors.red
+                            ),
                           ),
                         ) : const SizedBox()
                       ],

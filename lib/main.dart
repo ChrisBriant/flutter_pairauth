@@ -20,6 +20,10 @@ class PairAuth extends StatelessWidget {
     return MaterialApp(
       title: 'Pair Auth',
       theme: ThemeData(
+        appBarTheme: AppBarThemeData(
+          backgroundColor: const Color.fromARGB(255, 115, 160, 43),
+          foregroundColor: Colors.white,
+        ),
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
       home: const HomeScreen(),
