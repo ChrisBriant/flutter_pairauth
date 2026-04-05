@@ -19,6 +19,7 @@ class PairAuth extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Pair Auth',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         appBarTheme: AppBarThemeData(
           backgroundColor: const Color.fromARGB(255, 115, 160, 43),
