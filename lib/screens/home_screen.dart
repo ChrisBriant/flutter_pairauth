@@ -30,9 +30,13 @@ class _HomeScreenState extends State<HomeScreen> {
   bool deviceAuthenticated = false;
   bool registrationError = false;
   AuthType authType = AuthType.registration;
+  late String? deviceIdDisplay = null;
   
 
   void _handleDeepLink() async {
+    //Get the device ID for display
+    int deviceId= await AppAuth.getDeviceId();
+    deviceIdDisplay = deviceId.toString();
 
     // If app opened from closed state
     final uri = await _appLinks.getInitialLink();
@@ -253,6 +257,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height * .3,
               ),
+              deviceIdDisplay != null ? Padding(
+                padding: const EdgeInsets.only(top: 20.0),
+                child: Text(
+                  'Device Id : $deviceIdDisplay',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: const Color.fromARGB(255, 115, 160, 43),
+                  ),
+                  
+                ),
+              ) : const SizedBox(),
               Container(
                 margin: EdgeInsets.all(20),
                 child: registered || deviceAuthenticated
