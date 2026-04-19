@@ -1,4 +1,4 @@
-package uk.chrisbriant.pairauth
+package uk.chrisbriant.pearauth
 
 import io.flutter.embedding.android.FlutterActivity
 

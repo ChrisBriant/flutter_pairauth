@@ -92,5 +92,9 @@ class AppAuth {
     }
   }
 
+  static Future<void> clearStorage() async {
+    await storage.deleteAll();
+  }
+
 
 }
